@@ -1,0 +1,17 @@
+{
+  "homefolder": "",
+  "project_folder" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/", 
+  "fastqc_raw_data" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/raw_data/", 
+  "star_raw_data" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/raw_data/",
+   "star_index" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/star_index/",
+  "alignments" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/star_output/",
+ 
+ "sajr_input" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/star_output",
+  
+  "genomes" : "/nexus/posix0/MAGE-flaski/service/posit/home/sjiang/nextflow-alternative_splicing/genomes/",
+  
+  "organism" : "caenorhabditis_elegans",
+  "release" : "111",
+  "url_gtf" : "https://ftp.ensembl.org/pub/release-111/gtf/caenorhabditis_elegans/",
+  "url_dna" : "ftp://ftp.ensembl.org/pub/release-111/fasta/caenorhabditis_elegans/dna/",
+}
