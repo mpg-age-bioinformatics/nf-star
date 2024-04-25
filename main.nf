@@ -58,8 +58,8 @@ process star_indexer {
     
         STAR --runMode genomeGenerate \
              --genomeDir ${star_index} \ 
-             --genomeFastaFiles ${params.genomes}${params.organism}/${params.release}/.toplevel.fa \ #reference genome FASTA file
-             --sjdbGTFfile ../genomes/${params.organism}/${params.release}/original.gtf \
+             --genomeFastaFiles ${params.genomes}/${params.organism}/${params.release}/${params.organism}.${params.release}.fa \ 
+             --sjdbGTFfile ../genomes/${params.organism}/${params.release}/${params.organism}.${params.release}.gtf \
              --runThreadN 12
         
         """
