@@ -24,6 +24,14 @@ process get_images {
               then
                 singularity pull samtools-1.16.1.sif docker://index.docker.io/mpgagebioinformatics/samtools:1.16.1
             fi
+            
+            if [[ ! -f rnaseq.python-3.8-1.sif ]] ;
+              then
+                singularity pull rnaseq.python-3.8-1.sif docker://index.docker.io/mpgagebioinformatics/rnaseq.python:3.8-1
+            fi
+
+
+
 
         fi
 
@@ -34,7 +42,7 @@ process get_images {
 
             docker pull mpgagebioinformatics/star:2.7.11b
             docker pull mpgagebioinformatics/samtools:1.16.1
-
+            docker pull mpgagebioinformatics/rnaseq.python:3.8-1
         fi
 
         """
@@ -45,16 +53,19 @@ process rename_sample {
     stageInMode 'symlink'
     stageOutMode 'move'
 
+    // input:
+    //   val samplesheet
+
     script: 
 
       """
       #!/usr/bin/python3
-      os.system('pip install pandas')
-
-      import pandas as pd
+      
       import os
-
-      samplesheet = pd.read_excel("${params.sample_sheet_xlsx}")
+      import pandas as pd
+      import openpyxl
+      
+      samplesheet = pd.read_excel("/workdir/nf-star-test/sample_sheet.xlsx",engine="openpyxl")
       sample_sheet['sample_name'] = ''
       sample_sheet
       groups = dict()
@@ -68,7 +79,7 @@ process rename_sample {
           print('ln -s %s/%s %s/%s_%s${params.read1_sufix}' %('${params.raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
           os.system('ln -s %s/%s %s/%s_%s${params.read1_sufix}' %('${params.raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
           row[sample_name_colum] = '%s_%s' %(row[1], groups[row[1]])
-          if ${params.read2_sufix} in row[0]:
+          if "${params.read2_sufix}" in row[0]:
               print('ln -s ${params.raw_data}/%s ${params.raw_renamed}/%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
               os.system('ln -s ${params.raw_data}/%s ${params.raw_renamed}/%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
       
@@ -113,14 +124,15 @@ workflow images {
 }
 
 workflow rename {
-   if ( 'sample_sheet_xlsx' in params.keySet() ) {
-    samplesheet="${params.sample_sheet_xlsx}"
-  } else {
-    samplesheet=""
-  }
-  if ( ! file("${params.raw_renamed}").isDirectory() ) {
-    file("${params.raw_renamed}").mkdirs()
-  }
+  // if ( 'sample_sheet_xlsx' in params.keySet() ) {
+  //   samplesheet="${params.sample_sheet_xlsx}"
+  // } else {
+  //   samplesheet=""
+  // }
+  // if ( ! file("${params.raw_renamed}").isDirectory() ) {
+  //   file("${params.raw_renamed}").mkdirs()
+  // }
+  // rename_sample(samplesheet)
   rename_sample()
 }
 
