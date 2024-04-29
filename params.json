@@ -7,6 +7,7 @@
   "read1_sufix" : ".READ_1.fastq.gz",
   "read2_sufix" : ".READ_2.fastq.gz",
   "star_index" : "/nexus/posix0/MAGE-flaski/service/projects/data/Bioinformatics/alternative_splicing/caenorhabditis_elegans/111/toplevel_star_2.7.11b/",
+  "star_output" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/star_output/",
   "organism" : "caenorhabditis_elegans",
   "release" : "111",
   "max_intron": "4500"
