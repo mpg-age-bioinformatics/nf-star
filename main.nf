@@ -98,8 +98,8 @@ process star_indexer {
     
         STAR --runMode genomeGenerate \
              --genomeDir ${params.star_index} \
-             --genomeFastaFiles "${params.genomes}/${params.organism}/${params.release}/${params.organism}.${params.release}.fa" \
-             --sjdbGTFfile "${params.genomes}/${params.organism}/${params.release}/${params.organism}.${params.release}.gtf" \
+             --genomeFastaFiles "${params.genomes}${params.organism}/${params.release}/${params.organism}.${params.release}.fa" \
+             --sjdbGTFfile "${params.genomes}${params.organism}/${params.release}/${params.organism}.${params.release}.gtf" \
              --runThreadN 12
         
         """
@@ -126,40 +126,97 @@ process star_mapping {
     if ( single ) {
 
         """
-
         mkdir -p ${params.star_output}
-        cd /${params.raw_renamed}
+        cd ${params.raw_renamed}
 
         echo ${pair_id}
+
         if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
 
-        STAR --readFilesCommand zcat --runThreadN 12 --genomeDir ${params.star_index} --outSAMtype BAM SortedByCoordinate \
-            --limitBAMsortRAM 15000000000 --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz \
-            --outFileNamePrefix ${params.star_output}${pair_id}. \
-            --quantMode GeneCounts --genomeLoad NoSharedMemory --alignIntronMax ${params.max_intron} \
-            --twopassMode Basic --outSAMattributes NH HI AS nM NM MD jM jI XS  --sjdbGTFfile "${params.genomes}/${params.organism}/${params.release}/${params.organism}.${params.release}.gtf"
-        
+            STAR --readFilesCommand zcat \
+                --runThreadN 12 \
+                --genomeDir ${params.star_index} \
+                --outSAMtype BAM SortedByCoordinate \
+                --limitBAMsortRAM 15000000000 \
+                --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz \
+                --outFileNamePrefix ${params.star_output}${pair_id}. \
+                --quantMode GeneCounts \
+                --genomeLoad NoSharedMemory \
+                --alignIntronMax ${params.max_intron} \
+                --twopassMode Basic \
+                --outSAMattributes NH HI AS nM NM MD jM jI XS \
+                --sjdbGTFfile ${params.genomes}${params.organism}/${params.release}/${params.organism}.${params.release}.gtf
+        fi
         """
     }
-
     else {
           
         """
-        {mkdir -p ${params.star_output}
-        cd /${params.raw_renamed}
+        mkdir -p ${params.star_output}
+        cd ${params.raw_renamed}
 
         echo ${pair_id}
 
-        STAR --readFilesCommand zcat --runThreadN 12 --genomeDir ${params.star_index} --outSAMtype BAM SortedByCoordinate \
-            --limitBAMsortRAM 15000000000 --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz ${params.raw_renamed}${pair_id}.READ_2.fastq.gz \
-            --outFileNamePrefix ${alignments}${pair_id}. \
-            --quantMode GeneCounts --genomeLoad NoSharedMemory --alignIntronMax ${params.max_intron} \
-            --twopassMode Basic --outSAMattributes NH HI AS nM NM MD jM jI XS  --sjdbGTFfile "${params.genomes}/${params.organism}/${params.release}/${params.organism}.${params.release}.gtf"
+        echo "pass paired"
+
+        if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
+
+            STAR --readFilesCommand zcat \
+                --runThreadN 12 \
+                --genomeDir ${params.star_index} \
+                --outSAMtype BAM SortedByCoordinate \
+                --limitBAMsortRAM 15000000000 \
+                --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz ${params.raw_renamed}${pair_id}.READ_2.fastq.gz \
+                --outFileNamePrefix ${params.star_output}${pair_id}. \
+                --quantMode GeneCounts \
+                --genomeLoad NoSharedMemory \
+                --alignIntronMax ${params.max_intron} \
+                --twopassMode Basic \
+                --outSAMattributes NH HI AS nM NM MD jM jI XS \
+                --sjdbGTFfile ${params.genomes}${params.organism}/${params.release}/${params.organism}.${params.release}.gtf
+        fi
+
         """
     }
+
 } 
 
+process samtools_index {
+  stageInMode 'symlink'
+  stageOutMode 'move'
 
+  input:
+    val pair_id
+    tuple val(pair_id), path(fastq)
+
+  when:
+    ( ! file("${params.sajr_output}asplicing.merged.sorted.bam").exists() ) 
+
+
+  script:
+    """
+    cd ${params.star_output}
+
+    if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
+
+    samtools index ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam
+    
+    fi
+
+    if [ ! -e ${params.sajr_output}asplicing.merged.sorted.bam ] ; then
+
+    mkdir -p ${params.sajr_output}
+  
+    samtools merge -f -@ 10 -O BAM ${params.sajr_output}asplicing.merged.bam *.bam
+    
+    cd ${params.sajr_output}
+
+    samtools sort -@ 10 -o asplicing.merged.sorted.bam asplicing.merged.bam
+    samtools index asplicing.merged.sorted.bam
+
+    fi
+    """
+}
 
 
 workflow images {
@@ -183,4 +240,6 @@ workflow map_reads {
   main:
     read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
     star_mapping( read_files )
+    samtools_index( star_mapping.out.collect(), read_files )
+
 }
