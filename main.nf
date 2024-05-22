@@ -70,12 +70,12 @@ process rename_sample {
               groups[row[1]] = 1
           else: 
               groups[row[1]] += 1     
-          print('ln -s %s%s %s%s_%s${params.read1_sufix}' %('${params.raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
-          os.system('ln -s %s%s %s%s_%s${params.read1_sufix}' %('${params.raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
+          print('ln -s %s%s %s%s_%s${params.read1_sufix}' %('${params.fastqc_raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
+          os.system('ln -s %s%s %s%s_%s${params.read1_sufix}' %('${params.fastqc_raw_data}', row[0], '${params.raw_renamed}', row[1], groups[row[1]]))
           row[sample_name_colum] = '%s_%s' %(row[1], groups[row[1]])
           if "${params.read2_sufix}" in row[0]:
-              print('ln -s ${params.raw_data}%s ${params.raw_renamed}%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
-              os.system('ln -s ${params.raw_data}%s ${params.raw_renamed}%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
+              print('ln -s ${params.fastqc_raw_data}%s ${params.raw_renamed}%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
+              os.system('ln -s ${params.fastqc_raw_data}%s ${params.raw_renamed}%s_%s${params.read2_sufix}' % (row[0].replace('${params.read1_sufix}', '${params.read2_sufix}'), row[1], groups[row[1]]))
       
       """
 }
