@@ -59,7 +59,7 @@ process rename_sample {
       import pandas as pd
       import openpyxl
       
-      samplesheet = pd.read_excel("/workdir/nf-star-test/sample_sheet.xlsx",engine="openpyxl")
+      samplesheet = pd.read_excel("/workdir/sample_sheet.xlsx",engine="openpyxl")
       samplesheet['sample_name'] = ''
       samplesheet
       groups = dict()
