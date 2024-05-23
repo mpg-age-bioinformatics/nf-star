@@ -116,8 +116,8 @@ process star_mapping {
     output:
     val pair_id
 
-    when:
-    ( ! file("${params.project_folder}/star_output/${pair_id}.Aligned.sortedByCoord.out.bam").exists() ) 
+    // when:
+    // ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam").exists() ) 
    
     script:
     
@@ -126,12 +126,11 @@ process star_mapping {
     if ( single ) {
 
         """
-        mkdir -p ${params.star_output}
         cd ${params.raw_renamed}
 
         echo ${pair_id}
 
-        if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
+        if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
 
             STAR --readFilesCommand zcat \
                 --runThreadN 12 \
@@ -139,7 +138,7 @@ process star_mapping {
                 --outSAMtype BAM SortedByCoordinate \
                 --limitBAMsortRAM 15000000000 \
                 --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz \
-                --outFileNamePrefix ${params.star_output}${pair_id}. \
+                --outFileNamePrefix ${params.star_out}${pair_id}. \
                 --quantMode GeneCounts \
                 --genomeLoad NoSharedMemory \
                 --alignIntronMax ${params.max_intron} \
@@ -147,19 +146,19 @@ process star_mapping {
                 --outSAMattributes NH HI AS nM NM MD jM jI XS \
                 --sjdbGTFfile ${params.genomes}${params.organism}/${params.release}/${params.organism}.${params.release}.gtf
         fi
+
         """
     }
     else {
           
         """
-        mkdir -p ${params.star_output}
         cd ${params.raw_renamed}
 
         echo ${pair_id}
 
         echo "pass paired"
 
-        if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
+        if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
 
             STAR --readFilesCommand zcat \
                 --runThreadN 12 \
@@ -167,7 +166,7 @@ process star_mapping {
                 --outSAMtype BAM SortedByCoordinate \
                 --limitBAMsortRAM 15000000000 \
                 --readFilesIn ${params.raw_renamed}${pair_id}.READ_1.fastq.gz ${params.raw_renamed}${pair_id}.READ_2.fastq.gz \
-                --outFileNamePrefix ${params.star_output}${pair_id}. \
+                --outFileNamePrefix ${params.star_out}${pair_id}. \
                 --quantMode GeneCounts \
                 --genomeLoad NoSharedMemory \
                 --alignIntronMax ${params.max_intron} \
@@ -181,6 +180,26 @@ process star_mapping {
 
 } 
 
+process bam2bed {
+  stageInMode 'symlink'
+  stageOutMode 'move'
+
+  input:
+    val pair_id
+    tuple val(pair_id), path(fastq)
+
+  script:
+    """
+    cd ${params.star_out}
+
+    if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed ] ; then
+    samtools sort -@ 2 ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam | genomeCoverageBed -bga -split -ibam - > ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed
+    fi
+
+    """
+
+}
+
 process samtools_index {
   stageInMode 'symlink'
   stageOutMode 'move'
@@ -189,32 +208,32 @@ process samtools_index {
     val pair_id
     tuple val(pair_id), path(fastq)
 
-  when:
-    ( ! file("${params.sajr_output}asplicing.merged.sorted.bam").exists() ) 
+  // when:
+  //   ( ! file("${params.sajr_output}asplicing.merged.sorted.bam").exists() ) 
 
 
   script:
     """
-    cd ${params.star_output}
+    cd ${params.star_out}
 
-    if [ ! -e ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam ] ; then
-
-    samtools index ${params.star_output}${pair_id}.Aligned.sortedByCoord.out.bam
-    
+    if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam.bai ] ; then
+    samtools index ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam
     fi
 
     if [ ! -e ${params.sajr_output}asplicing.merged.sorted.bam ] ; then
-
-    mkdir -p ${params.sajr_output}
-  
     samtools merge -f -@ 10 -O BAM ${params.sajr_output}asplicing.merged.bam *.bam
+    fi
     
     cd ${params.sajr_output}
 
+    if [ ! -e asplicing.merged.sorted.bam ] ; then 
     samtools sort -@ 10 -o asplicing.merged.sorted.bam asplicing.merged.bam
-    samtools index asplicing.merged.sorted.bam
-
     fi
+
+    if [ ! -e asplicing.merged.sorted.bam.bai ]; then
+    samtools index asplicing.merged.sorted.bam
+    fi
+
     """
 }
 
@@ -226,20 +245,34 @@ workflow images {
 }
 
 workflow rename {
+  if ( ! file("${params.raw_renamed}").isDirectory() ) {
+        file("${params.raw_renamed}").mkdirs()
+      }
   rename_sample()
 }
 
 
 workflow index {
   main:
+  if ( ! file("${params.star_index}").isDirectory() ) {
+        file("${params.star_index}").mkdirs()
+      }
   star_indexer()
 }
 
 
 workflow map_reads {
   main:
+    if ( ! file("${params.star_out}").isDirectory() ) {
+        file("${params.star_out}").mkdirs()
+      }
+    if ( ! file("${params.sajr_output}").isDirectory() ) {
+        file("${params.sajr_output}").mkdirs()
+      }
+
     read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
     star_mapping( read_files )
+    bam2bed( star_mapping.out.collect(), read_files )
     samtools_index( star_mapping.out.collect(), read_files )
 
 }

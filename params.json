@@ -1,6 +1,6 @@
 {
   "project_folder" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/",
-  "raw_data" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/nf-star-test/raw_data/",
+  "fastqc_raw_data" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/raw_data/",
   "genomes" : "/nexus/posix0/MAGE-flaski/service/projects/data/Bioinformatics/alternative_splicing/",
   "raw_renamed" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/raw_renamed/",
   "sample_sheet_xlsx" : "/nexus/posix0/MAGE-flaski/service/hpc/home/sjiang/nextflow-alternative_splicing/nf-star-test/sample_sheet.xlsx",
