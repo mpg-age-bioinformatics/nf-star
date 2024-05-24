@@ -220,26 +220,26 @@ process samtools_index {
     val pair_id
     tuple val(pair_id), path(fastq)
 
-  // when:
-  //   ( ! file("${params.sajr_output}{params.series}.merged.sorted.bam.bai").exists() ) 
+  when:
+    ( ! file("${params.sajr_output}${params.series}.merged.sorted.bam").exists() ) 
 
 
   script:
     """
     cd ${params.star_out}
 
-    if [ ! -e ${params.sajr_output}{params.series}.merged.sorted.bam ] ; then
-    samtools merge -f -@ 10 -O BAM ${params.sajr_output}{params.series}.merged.bam *.bam
+    if [ ! -e ${params.sajr_output}${params.series}.merged.sorted.bam ] ; then
+    samtools merge -f -@ 10 -O BAM ${params.sajr_output}${params.series}.merged.bam *.bam
     fi
     
     cd ${params.sajr_output}
 
-    if [ ! -e {params.series}.merged.sorted.bam ] ; then 
-    samtools sort -@ 10 -o {params.series}.merged.sorted.bam {params.series}.merged.bam
+    if [ ! -e ${params.series}.merged.sorted.bam ] ; then 
+    samtools sort -@ 10 -o ${params.series}.merged.sorted.bam ${params.series}.merged.bam
     fi
 
-    if [ ! -e {params.series}.merged.sorted.bam.bai ]; then
-    samtools index {params.series}.merged.sorted.bam
+    if [ ! -e ${params.series}.merged.sorted.bam.bai ]; then
+    samtools index ${params.series}.merged.sorted.bam
     fi
 
     """
