@@ -30,6 +30,11 @@ process get_images {
                 singularity pull rnaseq.python-3.8-1.sif docker://index.docker.io/mpgagebioinformatics/rnaseq.python:3.8-1
             fi
 
+            if [[ ! -f irfinder-1.3.1.sif ]] ;
+              then
+                singularity pull irfinder-1.3.1.sif docker://index.docker.io/mpgagebioinformatics/irfinder:1.3.1
+            fi
+
         fi
 
 
@@ -40,6 +45,7 @@ process get_images {
             docker pull mpgagebioinformatics/star:2.7.11b
             docker pull mpgagebioinformatics/samtools:1.16.1
             docker pull mpgagebioinformatics/rnaseq.python:3.8-1
+            docker pull mpgagebioinformatics/irfinder:1.3.1.sif
         fi
 
         """
@@ -116,8 +122,8 @@ process star_mapping {
     output:
     val pair_id
 
-    // when:
-    // ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam").exists() ) 
+    when:
+    ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam").exists() ) 
    
     script:
     
@@ -188,6 +194,12 @@ process bam2bed {
     val pair_id
     tuple val(pair_id), path(fastq)
 
+  output:
+    val pair_id
+
+  when:
+    ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed").exists() ) 
+
   script:
     """
     cd ${params.star_out}
@@ -209,29 +221,25 @@ process samtools_index {
     tuple val(pair_id), path(fastq)
 
   // when:
-  //   ( ! file("${params.sajr_output}asplicing.merged.sorted.bam").exists() ) 
+  //   ( ! file("${params.sajr_output}{params.series}.merged.sorted.bam.bai").exists() ) 
 
 
   script:
     """
     cd ${params.star_out}
 
-    if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam.bai ] ; then
-    samtools index ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam
-    fi
-
-    if [ ! -e ${params.sajr_output}asplicing.merged.sorted.bam ] ; then
-    samtools merge -f -@ 10 -O BAM ${params.sajr_output}asplicing.merged.bam *.bam
+    if [ ! -e ${params.sajr_output}{params.series}.merged.sorted.bam ] ; then
+    samtools merge -f -@ 10 -O BAM ${params.sajr_output}{params.series}.merged.bam *.bam
     fi
     
     cd ${params.sajr_output}
 
-    if [ ! -e asplicing.merged.sorted.bam ] ; then 
-    samtools sort -@ 10 -o asplicing.merged.sorted.bam asplicing.merged.bam
+    if [ ! -e {params.series}.merged.sorted.bam ] ; then 
+    samtools sort -@ 10 -o {params.series}.merged.sorted.bam {params.series}.merged.bam
     fi
 
-    if [ ! -e asplicing.merged.sorted.bam.bai ]; then
-    samtools index asplicing.merged.sorted.bam
+    if [ ! -e {params.series}.merged.sorted.bam.bai ]; then
+    samtools index {params.series}.merged.sorted.bam
     fi
 
     """
@@ -273,6 +281,6 @@ workflow map_reads {
     read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
     star_mapping( read_files )
     bam2bed( star_mapping.out.collect(), read_files )
-    samtools_index( star_mapping.out.collect(), read_files )
+    samtools_index( bam2bed.out.collect(), read_files )
 
 }
