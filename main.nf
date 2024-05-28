@@ -216,10 +216,6 @@ process samtools_index {
   stageInMode 'symlink'
   stageOutMode 'move'
 
-  input:
-    val pair_id
-    tuple val(pair_id), path(fastq)
-
   when:
     ( ! file("${params.sajr_output}${params.series}.merged.sorted.bam").exists() ) 
 
@@ -281,6 +277,8 @@ workflow map_reads {
     read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
     star_mapping( read_files )
     bam2bed( star_mapping.out.collect(), read_files )
-    samtools_index( bam2bed.out.collect(), read_files )
+}
 
+workflow sorting {
+  samtools_index()
 }
