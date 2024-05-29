@@ -97,9 +97,6 @@ process star_indexer {
     script:
     
         """
-        
-        if [[ ! -e ${params.star_index} ]] ; then mkdir -p ${params.star_index} ; fi
-
         cd ${params.star_index}
     
         STAR --runMode genomeGenerate \
@@ -192,10 +189,6 @@ process bam2bed {
 
   input:
     val pair_id
-    tuple val(pair_id), path(fastq)
-
-  output:
-    val pair_id
 
   when:
     ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed").exists() ) 
@@ -205,7 +198,7 @@ process bam2bed {
     cd ${params.star_out}
 
     if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed ] ; then
-    samtools sort -@ 2 ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam | genomeCoverageBed -bga -split -ibam - > ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed
+    samtools sort -@ ${params.cups} ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam | genomeCoverageBed -bga -split -ibam - > ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed
     fi
 
     """
@@ -216,8 +209,26 @@ process samtools_index {
   stageInMode 'symlink'
   stageOutMode 'move'
 
+  input:
+    val pair_id
+
+  script:
+    """
+    cd ${params.star_out}
+
+    if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam.bai ]; then
+    samtools index ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam
+    fi
+
+    """
+}
+
+process samtools_merge {
+  stageInMode 'symlink'
+  stageOutMode 'move'
+
   when:
-    ( ! file("${params.sajr_output}${params.series}.merged.sorted.bam").exists() ) 
+    ( ! file("${params.sajr_output}${params.series}.merged.sorted.bam.bai ").exists() ) 
 
 
   script:
@@ -225,13 +236,13 @@ process samtools_index {
     cd ${params.star_out}
 
     if [ ! -e ${params.sajr_output}${params.series}.merged.sorted.bam ] ; then
-    samtools merge -f -@ 10 -O BAM ${params.sajr_output}${params.series}.merged.bam *.bam
+    samtools merge -f -@ ${params.cups} -O BAM ${params.sajr_output}${params.series}.merged.bam *.bam
     fi
     
     cd ${params.sajr_output}
 
     if [ ! -e ${params.series}.merged.sorted.bam ] ; then 
-    samtools sort -@ 10 -o ${params.series}.merged.sorted.bam ${params.series}.merged.bam
+    samtools sort -@ ${params.cups} -o ${params.series}.merged.sorted.bam ${params.series}.merged.bam
     fi
 
     if [ ! -e ${params.series}.merged.sorted.bam.bai ]; then
@@ -264,21 +275,26 @@ workflow index {
   star_indexer()
 }
 
-
 workflow map_reads {
   main:
+    read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
+    star_mapping( read_files )
+    bam2bed( star_mapping.out.collect() )
+}
+
+workflow bam_index {
+
     if ( ! file("${params.star_out}").isDirectory() ) {
         file("${params.star_out}").mkdirs()
       }
-    if ( ! file("${params.sajr_output}").isDirectory() ) {
+    samtools_index( pair_id )
+}
+
+
+workflow merging {
+  if ( ! file("${params.sajr_output}").isDirectory() ) {
         file("${params.sajr_output}").mkdirs()
       }
 
-    read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
-    star_mapping( read_files )
-    bam2bed( star_mapping.out.collect(), read_files )
-}
-
-workflow sorting {
-  samtools_index()
+  samtools_merge()
 }
