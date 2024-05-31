@@ -197,7 +197,7 @@ process samtools_index {
     fi
 
     if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed ] ; then
-    samtools sort -@ ${params.cpus} ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam | genomeCoverageBed -bga -split -ibam - > ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed
+    samtools sort -@ ${task.cpus} ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam | genomeCoverageBed -bga -split -ibam - > ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed
     fi
 
     """
@@ -216,13 +216,13 @@ process samtools_merge {
     cd ${params.star_out}
 
     if [ ! -e ${params.sajr_output}${params.series}.merged.sorted.bam ] ; then
-    samtools merge -f -@ ${params.cpus} -O BAM ${params.sajr_output}${params.series}.merged.bam *.bam
+    samtools merge -f -@ ${task.cpus} -O BAM ${params.sajr_output}${params.series}.merged.bam *.bam
     fi
     
     cd ${params.sajr_output}
 
     if [ ! -e ${params.series}.merged.sorted.bam ] ; then 
-    samtools sort -@ ${params.cpus} -o ${params.series}.merged.sorted.bam ${params.series}.merged.bam
+    samtools sort -@ ${task.cpus} -o ${params.series}.merged.sorted.bam ${params.series}.merged.bam
     fi
 
     if [ ! -e ${params.series}.merged.sorted.bam.bai ]; then
