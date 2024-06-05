@@ -28,7 +28,9 @@ Run the workflow:
 nextflow run nf-star -params-file nf-star/params.json -entry images -profile studio && \
 nextflow run nf-star -params-file nf-star/params.json -entry rename -profile studio && \
 nextflow run nf-star -params-file nf-star/params.json -entry index -profile studio && \
-nextflow run nf-star -params-file nf-star/params.json -entry map_reads -profile studio 
+nextflow run nf-star -params-file nf-star/params.json -entry bam_index -profile studio && \
+nextflow run nf-star -params-file nf-star/params.json -entry map_reads -profile studio && \
+nextflow run nf-star -params-file nf-star/params.json -entry merging -profile studio
 
 ```
 
