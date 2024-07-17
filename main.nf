@@ -116,6 +116,9 @@ process star_mapping {
     input:
     tuple val(pair_id), path(fastq)
 
+    output:
+    val pair_id
+
     when:
     ( ! file("${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam").exists() ) 
    
@@ -185,15 +188,15 @@ process samtools_index {
   stageOutMode 'move'
 
   input:
-    val bam_file
     val pair_id
+    tuple val(pair_id), path(fastq)
 
   script:
     """
     cd ${params.star_out}
 
     if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam.bai ]; then
-    samtools index ${params.star_out}${bam_file}
+    samtools index ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bam
     fi
 
     if [ ! -e ${params.star_out}${pair_id}.Aligned.sortedByCoord.out.bed ] ; then
@@ -246,7 +249,6 @@ workflow rename {
   rename_sample()
 }
 
-
 workflow index {
   main:
   if ( ! file("${params.star_index}").isDirectory() ) {
@@ -255,28 +257,22 @@ workflow index {
   star_indexer()
 }
 
+
 workflow map_reads {
 
   if ( ! file("${params.star_out}").isDirectory() ) {
         file("${params.star_out}").mkdirs()
       }
 
+  if ( ! file("${params.sajr_output}").isDirectory() ) {
+        file("${params.sajr_output}").mkdirs()
+      }
+
   read_files=Channel.fromFilePairs( "${params.raw_renamed}/*.READ_{1,2}.fastq.gz", size: -1 )
   star_mapping( read_files )
-    
+
+  samtools_index(star_mapping.out.collect(), read_files)
 }
-
-workflow bam_index {
-
-  bam_file = Channel.fromPath("${params.star_out}/*.Aligned.sortedByCoord.out.bam")
-      bam_file = bam_file.map{ "$it.name" }
-      pair_id = bam_file.map { "$it".replace(".Aligned.sortedByCoord.out.bam", "")
-
-    }
-    samtools_index(bam_file, pair_id)
-
-}
-
 
 workflow merging {
   if ( ! file("${params.sajr_output}").isDirectory() ) {
